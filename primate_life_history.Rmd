@@ -1,0 +1,181 @@
+---
+title: "Exploring Data Analysis & Visualizations of Primate Life Histories"
+output: html_notebook
+---
+
+Data from An Age: The Animal Ageing and Longevity Dataset
+#https://genomics.senescence.info/species/biblio.php 
+
+```{r, include=FALSE}
+library(tidyverse)
+library(lme4)
+library(bbmle)
+library(MuMIn)
+
+# Read tabular data into R
+ages <- read.delim("anage_data.txt")
+
+#rename columns
+ages <- ages %>%
+  rename(Bodymass = Body.mass..g., Birthweight = Birth.weight..g., weaning_days = Weaning..days., 
+         max_longevity = Maximum.longevity..yrs., gest_length = Gestation.Incubation..days.)
+
+```
+
+```{r}
+head(ages)
+class(ages$Order)
+table(ages$Order)
+#select only the primates
+primates<-filter(ages, Order == "Primates")
+
+table(ages$Data.quality)
+#remove data of low and unacceptable data quality, keep only acceptable and high data quality
+primates<-filter(primates, Data.quality == "acceptable" | Data.quality == "high")
+```
+
+How does length of weaning vary across the Primate Order?
+
+```{r}
+Family<-unique(primates$Family)
+
+primate_groups <- c("Platyrrhini", "Platyrrhini", "Platyrrhini", "Platyrrhini", "Catarrhini", "Strepsirrhini", "Strepsirrhini", "Strepsirrhini", "Catarrhini", "Catarrhini","Strepsirrhini", "Strepsirrhini", "Strepsirrhini", "Platyrrhini", "Tarsiiformes")
+
+primate_taxonomy<-data.frame(Family, primate_groups)
+
+primates2<-merge(x=primates, y=primate_taxonomy, by="Family")
+primates2$primate_groups<-as.factor(primates2$primate_groups)
+levels(primates2$primate_groups)
+
+primates2$primate_groups2 <- fct_relevel(primates2$primate_groups, "Strepsirrhini", "Tarsiiformes", "Platyrrhini", "Catarrhini")
+levels(primates2$primate_groups2)
+
+primates2$Family2<-as.factor(primates2$Family)
+primates2$Family2<- fct_relevel(primates2$Family2, 
+  "Cheirogaleidae", "Daubentoniidae", "Galagidae" , "Indriidae", "Lemuridae", "Lorisidae",
+  "Tarsiidae" , 
+  "Aotidae", "Atelidae", "Callitrichidae", "Cebidae",  "Pitheciidae",        
+  "Cercopithecidae", "Hylobatidae", "Hominidae")
+
+```
+
+```{r}
+
+mean(primates2$weaning_days, na.rm=TRUE)
+
+wean_family<-primates2 %>% 
+  group_by(Family2) %>%
+   summarise(avg_weaning_days = mean(weaning_days, na.rm=TRUE), sd_weaning_days = sd(weaning_days, na.rm=TRUE))
+wean_family
+
+wean_order<-primates2 %>% 
+  group_by(primate_groups2) %>%
+  summarise(avg_weaning_days = mean(weaning_days, na.rm=TRUE), sd_weaning_days = sd(weaning_days, na.rm=TRUE))
+wean_order
+
+```
+
+```{r, include=FALSE}
+ggplot(primates2,aes(x=Family2, y=weaning_days)) + 
+  geom_boxplot(aes(fill=primate_groups2))+theme_bw()+
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
+  geom_point(position=position_dodge(width=0.75))+
+  labs(y="Weaning Days", x="Family")+
+  guides(fill=guide_legend("Primate Groupings")) 
+
+```
+
+```{r}
+hist(primates2$weaning_days, col="light blue", main="  ",  xlab = "number of days to weaning in Primates")
+
+#not normally distributed
+```
+```{r}
+library(PMCMR)
+
+#Kruskal–Wallis test is a non-parametric ANOVA
+#Tukey (aka Nemenyi) post-hoc test returns p-values of pairwise comparisons
+
+#Kruskal–Wallis test 
+k_test<-kruskal.test(primates2$weaning_days~primates2$primate_groups2)
+k_test
+
+#Kruskal-Wallis chi-squared = 5.3863, df = 3, p-value = 0.1456
+posthoc.kruskal.nemenyi.test(primates2$weaning_days~primates2$primate_groups2, dist =c("Tukey"))
+
+```
+
+```{r}
+sf_factors<-c("Genus", "Size", "Type", "Fruit_avail_IMR")
+
+offset<-(sf.trials$Mean.Final.Day)
+
+options(na.action = "na.fail") 
+globalmodel <- multinom(Final.Fate.Ordered ~ Genus + Size + Fruit_avail_IMR + Type, data=sf.trials, offset=Mean.Final.Day)
+combinations <- dredge(globalmodel)
+print(combinations)
+#coefTable(combinations)
+
+primates3$weaning_days<-complete.cases(primates2$weaning_days)
+class(primates3$weaning_days)
+
+primates3<-primates2[complete.cases(primates2[ , 13]),]
+
+options(na.action = "na.fail")
+global.model <- lm(weaning_days ~ Family2+Birthweight+ Bodymass+max_longevity, data = primates3)
+combinations <- dredge(global.model, rank = "AIC")
+
+print(combinations)
+
+model.sel(combinations)
+
+
+options(na.action = "na.fail")
+fm1 <- lm(weaning_days ~ ., data = primates3)
+dd <- dredge(fm1)
+subset(dd, delta < 4)
+
+#select columns
+birds2 <- primates2[, c(1,3,6,7)]
+#normalize columns
+birds2$logarea <- log(birds$area)
+birds2$logdist <- log(birds$dist)
+birds2$logldist <- log(birds$ldist)
+#show 
+pairs(birds2, gap = 0)
+
+pairs(primates3, gap = 0)
+
+```
+
+
+```{r}
+#intercept (null) model:
+wean_intercept <- lm(weaning_days~1, family = Gamma(link = "log"), data = primates2) 
+summary(wean_intercept)
+
+#models with predictive variables
+wean_m1<-lm(weaning_days~ Family2, family = Gamma(link = "log"),na.rm=TRUE, data = primates2)
+summary(wean_m1)
+
+wean_m2<-lm(weaning_days~ Family2+Birthweight, family = Gamma(link = "log"),na.rm=TRUE, data = primates2)
+summary(wean_m2)
+
+wean_m3<-lm(weaning_days~ Family2+Birthweight+ Bodymass, family = Gamma(link = "log"),na.rm=TRUE, data = primates2)
+summary(wean_m3)
+
+wean_m4<-lm(weaning_days~ Family2+Birthweight+ Bodymass+max_longevity, family = Gamma(link = "log"),na.rm=TRUE, data = primates2)
+summary(wean_m4)
+
+wean_m5<-lm(weaning_days~ Family2+Birthweight+ Bodymass+max_longevity, family = Gamma(link = "log"),na.rm=TRUE, data = primates2)
+summary(wean_m5)
+
+#compare AIC
+AICtab(wean_intercept, wean_m1, wean_m2, wean_m3, wean_m4, weights=TRUE, logLik=TRUE, base=TRUE)
+
+```
+
+
+
+
+
