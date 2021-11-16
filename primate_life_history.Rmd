@@ -6,11 +6,13 @@ output: html_notebook
 Data from An Age: The Animal Ageing and Longevity Dataset
 #https://genomics.senescence.info/species/biblio.php 
 
+
 ```{r, include=FALSE}
 library(tidyverse)
 library(lme4)
 library(bbmle)
 library(MuMIn)
+library(PMCMR)
 
 # Read tabular data into R
 ages <- read.delim("anage_data.txt")
@@ -90,6 +92,7 @@ hist(primates2$weaning_days, col="light blue", main="  ",  xlab = "number of day
 
 #not normally distributed
 ```
+
 ```{r}
 library(PMCMR)
 
@@ -106,10 +109,7 @@ posthoc.kruskal.nemenyi.test(primates2$weaning_days~primates2$primate_groups2, d
 ```
 
 ```{r}
-sf_factors<-c("Genus", "Size", "Type", "Fruit_avail_IMR")
-
-offset<-(sf.trials$Mean.Final.Day)
-
+#examples:
 options(na.action = "na.fail") 
 globalmodel <- multinom(Final.Fate.Ordered ~ Genus + Size + Fruit_avail_IMR + Type, data=sf.trials, offset=Mean.Final.Day)
 combinations <- dredge(globalmodel)
