@@ -120,7 +120,8 @@ primates2$weaning_days.log <- log(primates2$weaning_days)
 
 my_cols <- c("#00AFBB", "#E7B800", "#FC4E07", "#7fffd4") 
 
-#show 
+#show pair correlations 
+#colors: Teal blue = Strepsirrhini", Yellow = Tarsiiformes, Red=Platyrrhini, Aqua Green = Catarrhini
 pairs(primates2[, c(12, 13, 35, 36, 37)], gap=0,lower.panel = NULL, col = my_cols[primates2$primate_groups2], pch = 19,  cex = 1.5)
 
 ```
@@ -138,34 +139,54 @@ pairs.panels(primates2[, c(12, 35, 36, 37)],
 
 ```
 
-
 ```{r}
 #intercept (null) model:
-wean_intercept <- lm(weaning_days~1, family = Gamma(link = "log"), data = primates2) 
+wean_intercept <- lm(weaning_days.log~1, data = primates2) 
 summary(wean_intercept)
 
 #models with predictive variables
-wean_m1<-lm(weaning_days~ Family2, family = Gamma(link = "log"),na.rm=TRUE, data = primates2)
-summary(wean_m1)
-
-wean_m2<-lm(weaning_days~ Family2+Birthweight, family = Gamma(link = "log"),na.rm=TRUE, data = primates2)
-summary(wean_m2)
-
-wean_m3<-lm(weaning_days~ Family2+Birthweight+ Bodymass, family = Gamma(link = "log"),na.rm=TRUE, data = primates2)
-summary(wean_m3)
-
-wean_m4<-lm(weaning_days~ Family2+Birthweight+ Bodymass+max_longevity, family = Gamma(link = "log"),na.rm=TRUE, data = primates2)
-summary(wean_m4)
-
-wean_m5<-lm(weaning_days~ Family2+Birthweight+ Bodymass+max_longevity, family = Gamma(link = "log"),na.rm=TRUE, data = primates2)
-summary(wean_m5)
+wean_m1<-lm(weaning_days.log~ Family2, na.rm=TRUE, data = primates2)
+wean_m2<-lm(weaning_days.log~ Birthweight, na.rm=TRUE, data = primates2)
+wean_m4<-lm(weaning_days.log~ max_longevity.log, na.rm=TRUE, offset=Bodymass.log,data = primates2)
+wean_m5<-lm(weaning_days.log~ Family2 + Birthweight,na.rm=TRUE, offset=Bodymass.log, data = primates2)
+wean_m6<-lm(weaning_days.log~ Family2 + max_longevity.log, na.rm=TRUE, data = primates2)
+wean_m7<-lm(weaning_days.log~ Birthweight + max_longevity.log, offset=Bodymass.log, na.rm=TRUE, data = primates2)
+wean_m8<-lm(weaning_days.log~ Family2 + Birthweight + max_longevity.log, offset=Bodymass.log,  na.rm=TRUE, data = primates2)
 
 #compare AIC
-AICtab(wean_intercept, wean_m1, wean_m2, wean_m3, wean_m4, weights=TRUE, logLik=TRUE, base=TRUE)
+AICtab(wean_intercept, wean_m1, wean_m2, wean_m3, wean_m4,  wean_m5,  wean_m6,  wean_m7,  wean_m8, weights=TRUE, logLik=TRUE, base=TRUE)
 
 ```
 
+Linear model with log-transformed variables (Max Longevity, Days to Weaning), primate body weight was set as an offset.  
 
+```{r}
+#intercept (null) model:
+wean_intercept <- lm(weaning_days.log~1, data = primates2) 
+summary(wean_intercept)
 
+#models with predictive variables
+wean_m1<-lm(weaning_days.log~ Family2,offset=Bodymass.log, data = primates2)
+wean_m2<-lm(weaning_days.log~ Birthweight, offset=Bodymass.log, data = primates2)
+wean_m3<-lm(weaning_days.log~ max_longevity.log,offset=Bodymass.log, data = primates2)
+wean_m4<-lm(weaning_days.log~ Family2 + Birthweight, offset=Bodymass.log, data = primates2)
+wean_m5<-lm(weaning_days.log~ Family2 + max_longevity.log, offset=Bodymass.log, data = primates2)
+wean_m6<-lm(weaning_days.log~ Birthweight + max_longevity.log, offset=Bodymass.log, data = primates2)
+wean_m7<-lm(weaning_days.log~ Family2 + Birthweight + max_longevity.log, offset=Bodymass.log, data = primates2)
 
+#compare AIC
+AICtab(wean_intercept, wean_m1, wean_m2, wean_m3, wean_m4,  wean_m5,  wean_m6,  wean_m7, weights=TRUE, logLik=TRUE, base=TRUE)
 
+```
+
+```{r}
+#Summary of Model 5
+summary(wean_m5)
+exp(coef(wean_m5))
+
+#Summary of Model 7
+summary(wean_m7)
+exp(coef(wean_m7))
+```
+
+Primate subfamilies that produce relatively large neonates also have relatively long gestation lengths and weaning periods, advanced ages at maturity, and longer lifespans (Harvey & Clutton-Brock, 1985).
