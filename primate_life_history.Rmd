@@ -109,43 +109,15 @@ posthoc.kruskal.nemenyi.test(primates2$weaning_days~primates2$primate_groups2, d
 ```
 
 ```{r}
-#examples:
-options(na.action = "na.fail") 
-globalmodel <- multinom(Final.Fate.Ordered ~ Genus + Size + Fruit_avail_IMR + Type, data=sf.trials, offset=Mean.Final.Day)
-combinations <- dredge(globalmodel)
-print(combinations)
-#coefTable(combinations)
+#select columns & show 
+pairs(primates2[, c(12, 13, 21, 29)],gap=0)
 
-primates3$weaning_days<-complete.cases(primates2$weaning_days)
-class(primates3$weaning_days)
-
-primates3<-primates2[complete.cases(primates2[ , 13]),]
-
-options(na.action = "na.fail")
-global.model <- lm(weaning_days ~ Family2+Birthweight+ Bodymass+max_longevity, data = primates3)
-combinations <- dredge(global.model, rank = "AIC")
-
-print(combinations)
-
-model.sel(combinations)
-
-
-options(na.action = "na.fail")
-fm1 <- lm(weaning_days ~ ., data = primates3)
-dd <- dredge(fm1)
-subset(dd, delta < 4)
-
-#select columns
-birds2 <- primates2[, c(1,3,6,7)]
 #normalize columns
-birds2$logarea <- log(birds$area)
-birds2$logdist <- log(birds$dist)
-birds2$logldist <- log(birds$ldist)
+primates2$Bodymass.log <- log(primates2$Bodymass)
+primates2$max_longevity.log <- log(primates2$max_longevity)
+
 #show 
-pairs(birds2, gap = 0)
-
-pairs(primates3, gap = 0)
-
+pairs(primates2[, c(12, 13, 35, 36)],gap=0)
 ```
 
 
