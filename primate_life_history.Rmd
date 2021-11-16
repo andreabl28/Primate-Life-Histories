@@ -13,6 +13,7 @@ library(lme4)
 library(bbmle)
 library(MuMIn)
 library(PMCMR)
+library(psych)
 
 # Read tabular data into R
 ages <- read.delim("anage_data.txt")
@@ -115,9 +116,26 @@ pairs(primates2[, c(12, 13, 21, 29)],gap=0)
 #normalize columns
 primates2$Bodymass.log <- log(primates2$Bodymass)
 primates2$max_longevity.log <- log(primates2$max_longevity)
+primates2$weaning_days.log <- log(primates2$weaning_days)
+
+my_cols <- c("#00AFBB", "#E7B800", "#FC4E07", "#7fffd4") 
 
 #show 
-pairs(primates2[, c(12, 13, 35, 36)],gap=0)
+pairs(primates2[, c(12, 13, 35, 36, 37)], gap=0,lower.panel = NULL, col = my_cols[primates2$primate_groups2], pch = 19,  cex = 1.5)
+
+```
+
+```{r}
+#show data distribution of variables 
+#show Pearson Correlation Coefficients
+
+pairs.panels(primates2[, c(12, 35, 36, 37)], 
+             method = "pearson", # correlation method
+             hist.col = "#00AFBB",
+             density = TRUE,  # show density plots
+             ellipses = TRUE # show correlation ellipses
+             )
+
 ```
 
 
